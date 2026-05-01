@@ -51,9 +51,13 @@ THREAT_INTEL = {
     }
 }
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+import random
+
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -61,6 +65,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 @app.get("/")
 def home():
     return {"message": "SentryIQ Backend Running"}
@@ -68,6 +73,23 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# NEW: WebSocket Threat Feed
+@app.websocket("/ws/threats")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    while True:
+        threat = {
+            "cve": f"CVE-2024-{random.randint(1000,9999)}",
+            "severity": random.choice(["low", "medium", "high", "critical"]),
+            "source_ip": f"192.168.1.{random.randint(1,255)}",
+            "status": random.choice(["detected", "blocked", "investigating"])
+        }
+
+        await websocket.send_json(threat)
+        await asyncio.sleep(2)
 
 @app.post("/analyze")
 def analyze(data: dict):
